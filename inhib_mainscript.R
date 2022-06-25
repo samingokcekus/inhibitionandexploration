@@ -68,6 +68,21 @@ ggplot() +
   theme_classic()
 #helpers better, more variation among breeders 
 
+#sexstatus
+ggplot() +
+  geom_boxplot(data=xdata.c, aes(x=sexstatus, y=inhib_percfirstt, group = sexstatus)) + 
+  xlab("Sex & Status") + 
+  ylab("Percent trials first try") + 
+  theme_classic()
+
+#just adults for sex status 
+xdata.c.adult <- xdata.c[which(xdata.c$age_m > 19 & xdata.c$age_m < 101),]
+
+ggplot() +
+  geom_boxplot(data=xdata.c.adult, aes(x=sexstatus, y=inhib_percfirstt, group = sexstatus)) + 
+  xlab("Sex & Status") + 
+  ylab("Percent trials first try") + 
+  theme_classic()
 
 #group size 
 ggplot() +
@@ -505,12 +520,20 @@ plot(allEffects(pmc3))
 pmc4 <- lme4::glmer(firsttry ~ scale(age_2) + scale(age_m) + status + sex  + experiencedtasks + scale(as_numb_ob_first)  + scale(as_allobjects_f_first) + scale(serialtrialnum) + (1|name) + (1|sessionnum), data = inhib.ccf, family = poisson)
 summary(pmc4)
 plot(allEffects(pmc4))
+####
 
+pmc5 <- lme4::glmer(firsttry ~ scale(age_2) + scale(age_m) + sexstatus + experiencedtasks + scale(serialtrialnum) + (1|name) + (1|sessionnum), data = inhib.ccf, family = poisson)
+summary(pmc5)
+
+temp <- inhib.ccf[which(inhib.ccf$age_m > 19 & inhib.ccf$age_m < 101),]
+
+pmc6 <- lme4::glmer(firsttry ~ scale(age_2) + scale(age_m) + sexstatus + experiencedtasks + scale(serialtrialnum) + (1|name) + (1|sessionnum), data = temp, family = poisson)
+summary(pmc6)
 
 AICc(pmc1, pmc2, pmc3, pmc4)
 
 
-###visuals for last model 
+###visuals for final model 
 
 model_age <- data.frame(effect("scale(age_2)", pmc4, xlevels = 30))
 
