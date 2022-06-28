@@ -17,6 +17,11 @@ library(nlme)
 library(xtable)
 library(ggstance)
 library(jtools)
+library(performance)
+library(dplyr)
+library(brms)
+library(fitdistrplus)
+
 
 
 fullaug2019 <- readxl::read_excel("data/curiosity_leftright_19082019.xls")
@@ -158,6 +163,7 @@ unique(inhib.c$name)
 pm1.g <- glmer(firsttry ~ scale(age_2) + scale(age_m) + status + sex + groupsize + (1|name) + (1|sessionnum), data = inhib.c, family = poisson)
 summary(pm1.g)
 plot(allEffects(pm1.g))
+check_overdispersion(pm1.g)
 
 #no group size 
 pm1 <- glmer(firsttry ~ scale(age_2) +  scale(age_m) + status   + sex + (1|name) + (1|sessionnum), data = inhib, family = binomial)
@@ -166,6 +172,7 @@ plot(allEffects(pm1))
 simulationOutput <- simulateResiduals(fittedModel = pm1, plot = F)
 plot(simulationOutput)
 plotResiduals(simulationOutput, form = inhib.c$age_2)
+check_overdispersion(pm1)
 
 AICc(pm1.g, pm1) #definitely better without group size 
 
@@ -177,6 +184,7 @@ plot(allEffects(pm1))
 simulationOutput <- simulateResiduals(fittedModel = pm1, plot = F)
 plot(simulationOutput)
 plotResiduals(simulationOutput, form = inhib.c$age_2)
+check_overdispersion(pm1.exp)
 
 AICc(pm1.g, pm1, pm1.exp) #best with experience
 
@@ -207,6 +215,7 @@ summary(pm3)
 pm3.int <- glmer(firsttry ~ scale(age_2) + scale(age_m) + status + sex  + status*scale(serialtrialnum) + (1|name) + (1|sessionnum), data = inhib, family = poisson)
 summary(pm3.int)
 plot(allEffects(pm3.int))
+check_overdispersion(pm3.int)
 
 ggplot(aes(x=serialtrialnum, y=firsttry), data =inhib.c) +
   geom_point() + 
@@ -288,7 +297,7 @@ ggplot() +
   theme_light()
 
 summary(lm(change.fs ~ age_2 + age_m + sex + status, data=fs.bysess))
-  
+
 #relation to persistance?? 
 as.data.frame(colnames(xdata.c))
 temp <- xdata.c[,c(1,18)]
@@ -308,7 +317,7 @@ ccs <- cc[,c(1:12,70:74,111:122)]
 #get means and sums for each individual 
 as.data.frame(colnames(ccs))
 
-library(dplyr)
+
 #sum 
 sum_m_d_all <- ccs %>% group_by(name) %>% summarise(sum_m_d_all = mean(sum_m_d, na.rm = T))
 sum_as_d_all <- ccs %>% group_by(name) %>% summarise(sum_as_d_all = mean(sum_as_d, na.rm = T))
@@ -430,7 +439,7 @@ ggplot() +
 
 
 
-# results part 3a - quick visual inhibition perc first +exploration in the first session ####
+# results part 3a - quick visual inhibition perc first + exploration in the first session ####
 
 #number of objects 
 ggplot() +
@@ -506,15 +515,18 @@ inhib.ccf <- merge(inhib.ccf, task, by="name")
 pmc1 <- glmer(firsttry ~ scale(age_2) + scale(age_m) + status + sex  + experiencedtasks + scale(as_numb_ob_first) + (1|name) + (1|sessionnum), data = inhib.ccf, family = poisson)
 summary(pmc1)
 plot(allEffects(pmc1))
+check_overdispersion(pmc1)
 
 pmc2 <- glmer(firsttry ~ scale(age_2) + scale(age_m) + status + sex  + experiencedtasks + scale(as_allobjects_f_first) + (1|name) + (1|sessionnum), data = inhib.ccf, family = poisson)
 summary(pmc2)
 plot(allEffects(pmc2))
+check_overdispersion(pmc2)
+
 
 pmc3 <- glmer(firsttry ~ scale(age_2) + scale(age_m) + status + sex  + experiencedtasks + scale(as_numb_ob_first)  + scale(as_allobjects_f_first) + (1|name) + (1|sessionnum), data = inhib.ccf, family = poisson)
 summary(pmc3)
 plot(allEffects(pmc3))
-
+check_overdispersion(pmc3)
 
 #final model 
 pmc4 <- lme4::glmer(firsttry ~ scale(age_2) + scale(age_m) + status + sex  + experiencedtasks + scale(as_numb_ob_first)  + scale(as_allobjects_f_first) + scale(serialtrialnum) + (1|name) + (1|sessionnum), data = inhib.ccf, family = poisson)
@@ -569,11 +581,38 @@ model <- as.data.frame(summary(pmc4)$coefficients)
 
 jtools::effect_plot(pmc4, data=inhib.ccf, pred=age_2, interval = TRUE, plot.points = TRUE, jitter =.1)
 jtools::plot_summs(pmc4, colors = "black", coefs = c("Age squared" = "scale(age_2)", "Breeding status (helper vs. breeder)" = "statush", "Sex (male vs. female)" = "sexm","Previous task experience" = "experiencedtasks",
-                                   "Number of objects explored" = "scale(as_numb_ob_first)", "Frequency of exploration" = "scale(as_allobjects_f_first)",
-                                  "Trial number" = "scale(serialtrialnum)"),
+                                                     "Number of objects explored" = "scale(as_numb_ob_first)", "Frequency of exploration" = "scale(as_allobjects_f_first)",
+                                                     "Trial number" = "scale(serialtrialnum)"),
                    inner_ci_level =.9)
 sjPlot::plot_model(pmc4)
 
 
+# Trying out bayesian model ----
+
+descdist(inhib.ccf$firsttry, discrete = FALSE)
+
+#### Priors ----
+
+prior_modfinal <- c(prior(normal(0, 10), class = Intercept),
+                    prior(normal(0, 5), class = b),
+                    prior(cauchy(0, 2), class = sd))
 
 
+#### Formula ----
+form_modfinal <- bf(firsttry ~ scale(age_2) + scale(age_m) + sexstatus  + experiencedtasks + scale(as_numb_ob_first)  + scale(as_allobjects_f_first) + scale(serialtrialnum) + 
+                      (1|name) + (1|sessionnum)) + poisson()
+
+#### Fit ----
+
+fit_modfinal <- brm(formula = form_modfinal,
+                    data = inhib.ccf,
+                    prior = prior_modfinal,
+                    save_pars = save_pars(all = TRUE),
+                    iter= 10e3,
+                    control= list(adapt_delta = .999, max_treedepth = 15),
+                    cores = 4,
+                    seed = 13)
+
+pp_check(fit_modfinal, ndraws = 1e2)
+plot(fit_modfinal)
+summary(fit_modfinal, prob = 0.97) 
