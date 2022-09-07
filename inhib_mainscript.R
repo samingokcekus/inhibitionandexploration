@@ -602,6 +602,15 @@ prior_modfinal <- c(prior(normal(0, 10), class = Intercept),
 form_modfinal <- bf(firsttry ~ scale(age_2) + scale(age_m) + sexstatus  + experiencedtasks + scale(as_numb_ob_first)  + scale(as_allobjects_f_first) + scale(serialtrialnum) + 
                       (1|name) + (1|sessionnum)) + poisson()
 
+form_fullmod_inh <- bf(firsttry ~ age2_sc + age_m_sc + sex + status + sex*status  + experiencedtasks + as_numb_ob_first + as_allobjects_f_first + serialtrialnum + 
+                         (1|name) + (1|sessionnum)) + bernoulli()
+
+form_fullmod_int <- bf(firsttry ~ age2_sc + age_m_sc + sex + status + sex*status  + experiencedtasks + as_numb_ob_first + as_allobjects_f_first + serialtrialnum + serialtrialnum*status +
+                         (1|name) + (1|sessionnum)) + bernoulli()
+
+form_fullmod_inh_woexp <- bf(firsttry ~ sexstatus  + as_allobjects_f_first + as_allobjects_f_first +
+                         (1|name) + (1|sessionnum)) + bernoulli()
+
 #### Fit ----
 
 fit_modfinal <- brm(formula = form_modfinal,
@@ -616,3 +625,64 @@ fit_modfinal <- brm(formula = form_modfinal,
 pp_check(fit_modfinal, ndraws = 1e2)
 plot(fit_modfinal)
 summary(fit_modfinal, prob = 0.97) 
+
+
+fit_fullmod_inh <- brm(formula = form_fullmod_inh,
+                       data = inhib.ccf,
+                       prior = prior_fullmod_inh,
+                       save_pars = save_pars(all = TRUE),
+                       iter = 6e3,
+                       control = list(adapt_delta = .99, max_treedepth = 15),
+                       cores = 4,
+                       seed = 13)
+
+
+pp_check(fit_fullmod_inh, ndraws = 1e2)
+plot(fit_fullmod_inh)
+summary(fit_fullmod_inh, prob = 0.89)
+p_direction(fit_fullmod_inh)
+bayes_R2(fit_fullmod_inh)
+loo_1 <- loo(fit_fullmod_inh)
+
+posterior_mfull_inhib <- as.matrix(fit_fullmod_inh)
+
+fit_fullmod_inh_int <- brm(formula = form_fullmod_int,
+                       data = inhib.ccf,
+                       prior = prior_fullmod_inh,
+                       save_pars = save_pars(all = TRUE),
+                       iter = 5e3,
+                       control = list(adapt_delta = .995, max_treedepth = 15),
+                       cores = 4,
+                       seed = 13)
+
+pp_check(fit_fullmod_inh_int, ndraws = 1e2)
+plot(fit_fullmod_inh_int)
+summary(fit_fullmod_inh_int, prob = 0.89)
+p_direction(fit_fullmod_inh_int)
+bayes_R2(fit_fullmod_inh_int)
+loo_int <- loo(fit_fullmod_inh_int)
+
+mod1_comp <- loo_compare(loo_1, loo_int)
+
+#### Plot----
+
+mainmodel <- mcmc_intervals(posterior_mfull_inhib, 
+                        pars = c("b_age2_sc", "b_age_m_sc", "b_sexm", "b_statush", "b_sexm:statush", "b_experiencedtasks", "b_as_numb_ob_first", "b_as_allobjects_f_first", "b_serialtrialnum"), 
+                        prob = 0.89) + 
+                        #area_method = "equal area") +
+  scale_y_discrete(labels = c("b_age2_sc" = "age [z-score] (quadratic term)",
+                              "b_age_m_sc" = "age [z-score] (linear term)",
+                              "b_sexm" = "sex (m)",
+                              "b_statush" = "status (helper)",
+                              "b_experiencedtasks" = "task experience",
+                              "b_as_numb_ob_first" = "diversity of exploration",
+                              "b_as_allobjects_f_first" = "frequency of exploration",
+                             "b_serialtrialnum" = "trial number"),
+                   expand = expansion(add = 0.5)) +
+  geom_vline(xintercept = 0, size = 0.7, col= "#03396c") +
+  theme_linedraw() +
+  theme(axis.title.x = element_markdown(size = 12),
+        axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 12, face = "bold"),
+        plot.title = element_markdown(size = 12)) + 
+  labs(x = "likelyhood to solve task in first try (89 % credible interval)") 
