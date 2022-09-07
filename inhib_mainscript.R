@@ -593,9 +593,14 @@ descdist(inhib.ccf$firsttry, discrete = FALSE)
 
 #### Priors ----
 
-prior_modfinal <- c(prior(normal(0, 10), class = Intercept),
-                    prior(normal(0, 5), class = b),
-                    prior(cauchy(0, 2), class = sd))
+
+prior_fullmod_weak <- c(prior(normal(0, 10), class = Intercept),
+                       prior(normal(0, 5), class = b),
+                       prior(cauchy(0, 2), class = sd))
+
+prior_fullmod_inh <- c(prior(normal(0, 1.5), class = Intercept),
+                       prior(normal(0, 0.5), class = b),
+                       prior(cauchy(0, 2), class = sd))
 
 
 #### Formula ----
