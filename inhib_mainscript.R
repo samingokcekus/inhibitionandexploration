@@ -626,7 +626,16 @@ mf <- lme4::glmer(firsttry ~ scale(age_2) + scale(age_m) + status + sex  + exper
 
 AICc(m0, m1, m2, m3, m4, m5, m6, mf)
 
+exp <- inhib.ccf[,c(24,23,30,31,32,34)]
+scale(exp)
+exp$sum_as_d_first <- scale(exp$sum_as_d_first)
+exp$sum_m_d_first  <- scale(exp$sum_m_d_first)
+exp$as_allobjects_f_first <- scale(exp$as_allobjects_f_first)
+exp$m_allobjects_f_first <- scale(exp$m_allobjects_f_first)
+exp$as_numb_ob_first <- scale(exp$as_numb_ob_first)
+exp$m_numb_ob_first <- scale(exp$m_numb_ob_first)
 
+#make nice looking histograms of these all on the same plot
 
 # Trying out bayesian model ----
 
