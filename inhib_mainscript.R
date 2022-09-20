@@ -140,6 +140,8 @@ ggplot() +
   ylab("Percent trials first try") +
   theme_light()
 
+summary(xdata.c$inhib_percfirstt)
+
 
 #### with raw data #### 
 raw_inhib <- readRDS("data/raw_inhib.Rds")
@@ -298,7 +300,7 @@ ggplot() +
 
 summary(lm(change.fs ~ age_2 + age_m + sex + status, data=fs.bysess))
 
-#relation to persistance?? 
+#relation to persistence?? 
 as.data.frame(colnames(xdata.c))
 temp <- xdata.c[,c(1,18)]
 fs.bysess <- merge(fs.bysess, temp)
@@ -585,6 +587,45 @@ jtools::plot_summs(pmc4, colors = "black", coefs = c("Age squared" = "scale(age_
                                                      "Trial number" = "scale(serialtrialnum)"),
                    inner_ci_level =.9)
 sjPlot::plot_model(pmc4)
+
+
+#### model selection 
+
+#BASE model
+m0 <- lme4::glmer(firsttry ~ scale(age_2) + scale(age_m) + status + sex  + experiencedtasks + scale(serialtrialnum) + (1|name) + (1|sessionnum), data = inhib.ccf, family = binomial)
+summary(m0)
+
+colnames(inhib.ccf)
+#sum_as_d_first
+#sum_m_d_first
+#as_allobjects_f_first*
+#m_allobjects_f_first
+#as_numb_ob_first*
+#m_numb_ob_first
+
+m1 <- lme4::glmer(firsttry ~ scale(age_2) + scale(age_m) + status + sex  + experiencedtasks + scale(serialtrialnum) + (1|name) + (1|sessionnum)
+                  + scale(sum_as_d_first), data = inhib.ccf, family = binomial)
+
+m2 <- lme4::glmer(firsttry ~ scale(age_2) + scale(age_m) + status + sex  + experiencedtasks + scale(serialtrialnum) + (1|name) + (1|sessionnum)
+                  + scale(sum_m_d_first), data = inhib.ccf, family = binomial)
+
+m3 <- lme4::glmer(firsttry ~ scale(age_2) + scale(age_m) + status + sex  + experiencedtasks + scale(serialtrialnum) + (1|name) + (1|sessionnum)
+                  + scale(as_allobjects_f_first), data = inhib.ccf, family = binomial)
+
+m4 <- lme4::glmer(firsttry ~ scale(age_2) + scale(age_m) + status + sex  + experiencedtasks + scale(serialtrialnum) + (1|name) + (1|sessionnum)
+                  + scale(m_allobjects_f_first), data = inhib.ccf, family = binomial)
+
+m5 <- lme4::glmer(firsttry ~ scale(age_2) + scale(age_m) + status + sex  + experiencedtasks + scale(serialtrialnum) + (1|name) + (1|sessionnum)
+                  + scale(as_numb_ob_first), data = inhib.ccf, family = binomial)
+
+m6 <- lme4::glmer(firsttry ~ scale(age_2) + scale(age_m) + status + sex  + experiencedtasks + scale(serialtrialnum) + (1|name) + (1|sessionnum)
+                  + scale(m_numb_ob_first), data = inhib.ccf, family = binomial)
+
+mf <- lme4::glmer(firsttry ~ scale(age_2) + scale(age_m) + status + sex  + experiencedtasks + scale(serialtrialnum) + (1|name) + (1|sessionnum)
+                  + scale(as_numb_ob_first) + scale(as_allobjects_f_first), data = inhib.ccf, family = binomial)
+
+AICc(m0, m1, m2, m3, m4, m5, m6, mf)
+
 
 
 # Trying out bayesian model ----
